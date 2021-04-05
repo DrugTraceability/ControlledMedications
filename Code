@@ -118,11 +118,13 @@ contract SupplyChain{
 
     constructor(address registrationaddress) public {
         
-        regcontract = Registration(registrationaddress); //links both contracts by setting the address of the registration contract
-        regcontract.CDR();
-        emit SupplyChainSCDeployer(regcontract.CDR()); //Should be changed to msg.sender if someone else will deploy the SC other than the CDR
+        //regcontract = Registration(registrationaddress); //links both contracts by setting the address of the registration contract
+        //regcontract.CDR();
+        regcontract = Registration(registrationaddress);
+        emit SupplyChainSCDeployer(msg.sender); //Should be changed to msg.sender if someone else will deploy the SC other than the CDR
 
     }
+    
     
 
     
@@ -198,13 +200,13 @@ contract Consumption{
     uint disposalDate;
     string disposalsheetIPFShash;
     
-    enum controlleddrugstate {ReadyForDispensing, Prescribed, Administered, Disposed}
+    enum controlleddrugstate {NotReady, ReadyForDispensing, Prescribed, Administered, Disposed}
     controlleddrugstate public drugstate; //refers to the state of the controlled drug after unboxing
         
     //Events  
     
     event ConsumptionSCDeployer(address indexed _address); //shows the address of the SC deployer
-    event DrugReady(address indexed _hospital);
+    event DrugReady(address indexed _hospital, uint _amount);
     event DrugPrescribed (address indexed prescriber, string patientID, string patientName, uint patientAge, string endorsements, string prescriptionIPFShash);
     event DrugAdministered(address indexed _nurse, string nurseName, uint administrationDate, uint dispensedAmount, string sheetIPFShash);
     event DrugDisposed(address indexed nurse, string nurseName, uint disposalDate, string disposalsheetIPFShash);
@@ -232,23 +234,24 @@ contract Consumption{
     
     //Constructor 
     
-    constructor(address registrationaddress, address supplyaddress) public {
+    constructor(address registrationaddress, address supplyaddress ) public {
         
         regcontract2 = Registration(registrationaddress);
         schain = SupplyChain(supplyaddress);
-        //regcontract2.CDR()
-        emit ConsumptionSCDeployer(regcontract2.CDR()); //Should be changed to msg.sender if someone else will deploy the SC other than the CDR
+        emit ConsumptionSCDeployer(msg.sender); //Should be changed to msg.sender if someone else will deploy the SC other than the CDR
         
     }
+    
     
 
     //Consumption contract Functions
     
     
-    function DrugReadyForDispensing(uint _availableAmount) public onlyHospital{
-        drugstate == controlleddrugstate.ReadyForDispensing;
-        availableAmount = _availableAmount;
-        emit DrugReady(msg.sender);
+    function DrugReadyForDispensing() public onlyHospital{
+        require(drugstate == controlleddrugstate.NotReady, "Other entities have already been made aware of this state of the drug");
+        drugstate = controlleddrugstate.ReadyForDispensing;
+        availableAmount = schain.controlleddrugQuantity();
+        emit DrugReady(msg.sender, availableAmount);
         
     }
     
