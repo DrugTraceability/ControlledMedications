@@ -68,7 +68,7 @@ contract Registration {
 
 //Creating the Supply Chain Smart contract
 
-contract SupplyChain{
+contract Production{
     
     //Declaring variables
     
@@ -87,7 +87,7 @@ contract SupplyChain{
     
     //Events 
     
-    event SupplyChainSCDeployer (address indexed _address); //An event to show the address of the registration SC deployer
+    event ProductionSCDeployer (address indexed _address); //An event to show the address of the Production SC deployer
     event ControlledDrugManufactured (address indexed _manufacturer, string _barcode, string _controlleddrugname, string IPFShash, string _schedule, uint _controlleddrugLots, uint _controlleddrugQuantity);
     event StartDelivery (address indexed distributor); //The start of delivery is emitted by the distributor
     event EnRoute (address indexed distributor); //Event indicating that the controlled drug lot is being delivered
@@ -121,14 +121,14 @@ contract SupplyChain{
         //regcontract = Registration(registrationaddress); //links both contracts by setting the address of the registration contract
         //regcontract.CDR();
         regcontract = Registration(registrationaddress);
-        emit SupplyChainSCDeployer(msg.sender); //Should be changed to msg.sender if someone else will deploy the SC other than the CDR
+        emit ProductionSCDeployer(msg.sender); 
 
     }
     
     
 
     
-    //SupplyChain contract Functions
+    //Production contract Functions
     
     
     function CreateControlledDrug(string _controlleddrugname, string _barcode, string _IPFShash, drugSchedule _schedule, uint _controlleddrugLots, uint _controlleddrugQuantity ) public onlyManufacturer returns(uint){
@@ -151,7 +151,7 @@ contract SupplyChain{
     return  controlleddrugQuantity;
     }
     
-    function startDelivey() public onlyDistributor{
+    function startDelivery() public onlyDistributor{
         require(lotstate == controlleddruglotState.Manufactured, "Can't run this function as the controlled drug lot has already been delivered or not yet manufactured");
         lotstate = controlleddruglotState.EnRoute;
         emit StartDelivery(msg.sender);
@@ -183,7 +183,7 @@ contract Consumption{
     //Declaring variables
     
     Registration regcontract2; 
-    SupplyChain schain;
+    Production schain;
     
     string patientID;
     string patientName;
@@ -237,7 +237,7 @@ contract Consumption{
     constructor(address registrationaddress, address supplyaddress ) public {
         
         regcontract2 = Registration(registrationaddress);
-        schain = SupplyChain(supplyaddress);
+        schain = Production(supplyaddress);
         emit ConsumptionSCDeployer(msg.sender); //Should be changed to msg.sender if someone else will deploy the SC other than the CDR
         
     }
