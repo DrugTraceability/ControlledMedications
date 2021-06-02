@@ -12,7 +12,7 @@ contract Registration {
     mapping(address => bool) public prescriber; //a mapping for authorized prescribers
     mapping(address => bool) public nurse; //a mapping for authorized nurses
     
-    //Registration Events 
+    //Registration Events
     
     event RegistrationSCDeployer (address indexed CDR); //An event to show the address of the registration SC deployer
 
@@ -40,29 +40,31 @@ contract Registration {
     //Registration Functions
     
     function manufacturerRegistration (address user) public onlyCDR {
-        
+        require(manufacturer[user] == false, "The user is already registered");
         manufacturer[user] = true;
         
     }
     
     function distributorRegistration (address user) public onlyCDR {
-        
+        require(distributor[user] == false, "The user is already registered");
         distributor[user] = true;
     }
     
     function hospitalRegistration (address user) public onlyCDR {
-        
+        require(hospital[user] == false, "The user is already registered");
         hospital[user] = true;
     }
     
     function prescriberRegistration (address user) public onlyHospital{
-        
+        require(prescriber[user] == false, "The user is already registered");
         prescriber[user] = true;
     }
     
     function nurseRegistration (address user) public onlyHospital{
+        require(nurse[user] == false, "The user is already registered");
         nurse[user] = true;
     }
+    
     
 }
 
@@ -131,9 +133,9 @@ contract Production{
     //Production contract Functions
     
     
-    function CreateControlledDrug(bytes32 _controlleddrugname, bytes32 _barcode, bytes32 _IPFShash, drugSchedule _schedule, uint _controlleddrugLots, uint _controlleddrugQuantity ) public onlyManufacturer returns(uint){
+    function CreateControlledDrug(bytes32 _controlleddrugname, bytes32 _barcode, bytes32 _IPFShash, drugSchedule _schedule, uint _controlleddrugLots, uint _controlleddrugQuantity ) public onlyManufacturer{
     require(lotstate == controlleddruglotState.NotReady, "can't run this function as the controlled drug lot has already been manufactured");
-    lotstate == controlleddruglotState.Manufactured;
+    lotstate = controlleddruglotState.Manufactured;
     lotbarcode = _barcode;
     controlleddrugname = _controlleddrugname;
     IPFShash = _IPFShash; //The hash can be converted into QR code and displayed on the DApp for easier access 
@@ -148,7 +150,6 @@ contract Production{
         
         emit ControlledDrugManufactured(msg.sender,lotbarcode,  controlleddrugname, IPFShash, "TypeII" , controlleddrugLots, controlleddrugQuantity );
     }
-    return  controlleddrugQuantity;
     }
     
     function startDelivery() public onlyDistributor{
@@ -170,10 +171,8 @@ contract Production{
         emit Reception(msg.sender);
     }
     
-    
-    
-    
-    
+        
+
 }
 
 //Creating the Consumption Smart contract
@@ -185,20 +184,20 @@ contract Consumption{
     Registration regcontract2; 
     Production schain;
     
-    bytes32 patientID;
-    bytes32 patientName;
-    uint patientAge;
-    uint prescriptionDate;
-    bytes32 endorsements; //The process of endorsing confirms the exact items that have been dispensed to the patient
-    bytes32 prescriptionIPFShash; //A photo of the prescription is stored on thee IPFS
-    bytes32 nurseName;
-    uint administrationDate;
-    uint availableAmount; 
-    uint dispensedAmount;//The number of controlled drugs dispensed by nurses
-    bytes32 sheetIPFShash; 
-    uint disposedAmount; //The number of unwanted/unused controlled drugs that have been disposedAmount
-    uint disposalDate;
-    bytes32 disposalsheetIPFShash;
+    bytes32 public patientID;
+    bytes32 public patientName;
+    uint public patientAge;
+    uint public prescriptionDate;
+    bytes32 public endorsements; //The process of endorsing confirms the exact items that have been dispensed to the patient
+    bytes32 public prescriptionIPFShash; //A photo of the prescription is stored on thee IPFS
+    bytes32 public nurseName;
+    uint public administrationDate;
+    uint public availableAmount; 
+    uint public dispensedAmount;//The number of controlled drugs dispensed by nurses
+    bytes32 public sheetIPFShash; 
+    uint public disposedAmount; //The number of unwanted/unused controlled drugs that have been disposedAmount
+    uint public disposalDate;
+    bytes32 public disposalsheetIPFShash;
     
     enum controlleddrugstate {NotReady, ReadyForDispensing, Prescribed, Administered, Disposed}
     controlleddrugstate public drugstate; //refers to the state of the controlled drug after unboxing
@@ -275,21 +274,23 @@ contract Consumption{
         dispensedAmount = _dispensedAmount;
         sheetIPFShash = _sheetIPFShash; //Administration sheet is uploaded
         availableAmount -= dispensedAmount; //Decrease available amount as drugs are dispensed
-        drugstate == controlleddrugstate.Administered;
+        drugstate = controlleddrugstate.Administered;
         emit DrugAdministered(msg.sender, nurseName, administrationDate, dispensedAmount, sheetIPFShash);
     }
     
     function DrugDisposal(bytes32 _nurseName, uint _disposalDate, uint _disposedAmount, bytes32 _disposalsheetIPFShash) public onlyNurse{
-        require(drugstate == controlleddrugstate.Prescribed, "Can't dispose drugs before they have been administired");
+        require(drugstate == controlleddrugstate.Administered, "Can't dispose drugs before they have been administired");
         require(_disposedAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
         availableAmount -= _disposedAmount;
         nurseName = _nurseName;
         disposalDate = _disposalDate;
         disposalsheetIPFShash = _disposalsheetIPFShash;
-        drugstate == controlleddrugstate.Disposed;
+        drugstate = controlleddrugstate.Disposed;
         emit DrugDisposed(msg.sender, nurseName, disposalDate, disposedAmount, disposalsheetIPFShash);
 
     }
     
+
+
         
 }
