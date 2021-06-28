@@ -184,31 +184,23 @@ contract Consumption{
     Registration regcontract2; 
     Production schain;
     
-    bytes32 public patientID;
-    bytes32 public patientName;
-    uint public patientAge;
-    uint public prescriptionDate;
-    bytes32 public endorsements; //The process of endorsing confirms the exact items that have been dispensed to the patient
-    bytes32 public prescriptionIPFShash; //A photo of the prescription is stored on thee IPFS
-    bytes32 public nurseName;
-    uint public administrationDate;
+    bytes32 public patientEA; //The Ethereum Address of the patient
     uint public availableAmount; 
-    uint public dispensedAmount;//The number of controlled drugs dispensed by nurses
-    bytes32 public sheetIPFShash; 
+    uint public prescribedAmount;//The number of controlled drugs dispensed by nurses
+    uint public administeredAmount; 
     uint public disposedAmount; //The number of unwanted/unused controlled drugs that have been disposedAmount
-    uint public disposalDate;
-    bytes32 public disposalsheetIPFShash;
-    
+    bytes32 public administereddrugImage;
+    bytes32 public disposeddrugImage; 
     enum controlleddrugstate {NotReady, ReadyForDispensing, Prescribed, Administered, Disposed}
     controlleddrugstate public drugstate; //refers to the state of the controlled drug after unboxing
         
     //Events  
     
     event ConsumptionSCDeployer(address indexed _address); //shows the address of the SC deployer
-    event DrugReady(address indexed _hospital, uint _amount);
-    event DrugPrescribed (address indexed prescriber, bytes32 patientID, bytes32 patientName, uint patientAge, bytes32 endorsements, bytes32 prescriptionIPFShash);
-    event DrugAdministered(address indexed _nurse, bytes32 nurseName, uint administrationDate, uint dispensedAmount, bytes32 sheetIPFShash);
-    event DrugDisposed(address indexed nurse, bytes32 nurseName, uint disposalDate, uint disposedAmount, bytes32 disposalsheetIPFShash);
+    event DrugReady(address indexed hospital, uint availableAmount);
+    event DrugPrescribed (address indexed prescriber, bytes32 indexed patientEA, uint prescribedAmount);
+    event DrugAdministered(address indexed nurse, bytes32 indexed patientEA, uint administeredAmount, bytes32 administereddrugImage);
+    event DrugDisposed(address indexed nurse, uint disposedAmount, bytes32 disposeddrugImage);
     
     //Modifiers
     
@@ -254,39 +246,38 @@ contract Consumption{
         
     }
     
-    function DrugPrescription(bytes32 _patientID, bytes32 _patientName, uint _patientAge, bytes32 _endorsements, bytes32 _prescriptionIPFShash) public onlyPrescriber{
+    
+    
+    function DrugPrescription(bytes32 _patientEA, uint _prescribedAmount) public onlyPrescriber{
         
         require(drugstate == controlleddrugstate.ReadyForDispensing , "Can't prescribe controlled drug before it's ready");
-        patientID = _patientID;
-        patientName = _patientName;
-        patientAge = _patientAge;
-        endorsements = _endorsements;
-        prescriptionIPFShash = _prescriptionIPFShash;
+        require(_prescribedAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
+        patientEA = _patientEA;
+        prescribedAmount = _prescribedAmount;
         drugstate = controlleddrugstate.Prescribed; 
-        emit DrugPrescribed(msg.sender, patientID, patientName, patientAge, endorsements, prescriptionIPFShash);
+        availableAmount -= _prescribedAmount;
+        emit DrugPrescribed(msg.sender, patientEA, prescribedAmount);
     }
     
-    function DrugAdministration(bytes32 _nurseName, uint _administrationDate, uint _dispensedAmount, bytes32 _sheetIPFShash) public onlyNurse{
+    function DrugAdministration(bytes32 _patientEA, uint _administeredAmount, bytes32 _administereddrugImage) public onlyNurse{
         require(drugstate == controlleddrugstate.Prescribed, "Controlled drugs must be prescribed first before administration");
-        require(_dispensedAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
-        nurseName = _nurseName;
-        administrationDate = _administrationDate;
-        dispensedAmount = _dispensedAmount;
-        sheetIPFShash = _sheetIPFShash; //Administration sheet is uploaded
-        availableAmount -= dispensedAmount; //Decrease available amount as drugs are dispensed
+        require(_administeredAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
+        patientEA = _patientEA;
+        administeredAmount = _administeredAmount;
+        administereddrugImage = _administereddrugImage; //Administration sheet is uploaded
+        availableAmount -= _administeredAmount; //Decrease available amount as drugs are dispensed
         drugstate = controlleddrugstate.Administered;
-        emit DrugAdministered(msg.sender, nurseName, administrationDate, dispensedAmount, sheetIPFShash);
+        emit DrugAdministered(msg.sender, patientEA, administeredAmount, administereddrugImage);
     }
     
-    function DrugDisposal(bytes32 _nurseName, uint _disposalDate, uint _disposedAmount, bytes32 _disposalsheetIPFShash) public onlyNurse{
+    function DrugDisposal(uint _disposedAmount, bytes32 _disposeddrugImage) public onlyNurse{
         require(drugstate == controlleddrugstate.Administered, "Can't dispose drugs before they have been administired");
         require(_disposedAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
-        availableAmount -= _disposedAmount;
-        nurseName = _nurseName;
-        disposalDate = _disposalDate;
-        disposalsheetIPFShash = _disposalsheetIPFShash;
+        disposeddrugImage = _disposeddrugImage;
+        disposedAmount = _disposedAmount;
+        availableAmount -= _disposedAmount; //Decrease available amount as drugs are diposed
         drugstate = controlleddrugstate.Disposed;
-        emit DrugDisposed(msg.sender, nurseName, disposalDate, disposedAmount, disposalsheetIPFShash);
+        emit DrugDisposed(msg.sender, disposedAmount, disposeddrugImage);
 
     }
     
