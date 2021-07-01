@@ -171,6 +171,17 @@ contract Production{
         emit Reception(msg.sender);
     }
     
+            function stringToBytes32(string memory source) public pure returns (bytes32 result) {
+    bytes memory tempEmptyStringTest = bytes(source);
+    if (tempEmptyStringTest.length == 0) {
+        return 0x0;
+    }
+
+    assembly {
+        result := mload(add(source, 32))
+    }
+}
+    
         
 
 }
@@ -184,7 +195,7 @@ contract Consumption{
     Registration regcontract2; 
     Production schain;
     
-    bytes32 public patientEA; //The Ethereum Address of the patient
+    address public patientEA; //The Ethereum Address of the patient
     uint public availableAmount; 
     uint public prescribedAmount;//The number of controlled drugs dispensed by nurses
     uint public administeredAmount; 
@@ -198,8 +209,8 @@ contract Consumption{
     
     event ConsumptionSCDeployer(address indexed _address); //shows the address of the SC deployer
     event DrugReady(address indexed hospital, uint availableAmount);
-    event DrugPrescribed (address indexed prescriber, bytes32 indexed patientEA, uint prescribedAmount);
-    event DrugAdministered(address indexed nurse, bytes32 indexed patientEA, uint administeredAmount, bytes32 administereddrugImage);
+    event DrugPrescribed (address indexed prescriber, address indexed patientEA, uint prescribedAmount);
+    event DrugAdministered(address indexed nurse, address indexed patientEA, uint administeredAmount, bytes32 administereddrugImage);
     event DrugDisposed(address indexed nurse, uint disposedAmount, bytes32 disposeddrugImage);
     
     //Modifiers
@@ -248,7 +259,7 @@ contract Consumption{
     
     
     
-    function DrugPrescription(bytes32 _patientEA, uint _prescribedAmount) public onlyPrescriber{
+    function DrugPrescription(address _patientEA, uint _prescribedAmount) public onlyPrescriber{
         
         require(drugstate == controlleddrugstate.ReadyForDispensing , "Can't prescribe controlled drug before it's ready");
         require(_prescribedAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
@@ -259,7 +270,7 @@ contract Consumption{
         emit DrugPrescribed(msg.sender, patientEA, prescribedAmount);
     }
     
-    function DrugAdministration(bytes32 _patientEA, uint _administeredAmount, bytes32 _administereddrugImage) public onlyNurse{
+    function DrugAdministration(address _patientEA, uint _administeredAmount, bytes32 _administereddrugImage) public onlyNurse{
         require(drugstate == controlleddrugstate.Prescribed, "Controlled drugs must be prescribed first before administration");
         require(_administeredAmount <= availableAmount , "The dispensed amount must be less than or equal to the available amount");
         patientEA = _patientEA;
